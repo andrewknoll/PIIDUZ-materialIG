@@ -30,6 +30,8 @@
 #include <atomic>
 #include <string>
 
+#include <ConcurrentBoundedQueue.hpp>
+
 // Vec is a structure to store position (x,y,z) and color (r,g,b)
 struct Vec {
     double x, y, z;
@@ -381,44 +383,50 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi){
                           radiance(reflRay,depth,Xi)*Re+radiance(Ray(x,tdir),depth,Xi)*Tr);
 }
 
-void render(int thread_num, int num_threads,
-            int w, int h, int samps,
-            Ray cam,
+struct Task {
+    int x0, x1, y0, y1, samps;
+    bool done;
+    Task(int x0, int x1, int y0, int y1, int samps) : 
+        x0(x0), x1(x1), y0(y0), y1(y1), samps(samps), done(false) {}
+    Task() : done(true) {}
+};
+
+void render(ConcurrentBoundedQueue<Task>& tasks, int w, int h, Ray cam,
             Vec cx, Vec cy, Vec r, Vec *c
     ) {
-    int y_height = h/num_threads;
-    int y0 = thread_num*y_height;
-    int y1 = y0 + y_height;
-    if(thread_num == num_threads - 1) {
-        y1 = h; // last thread might have a bit extra due to rounding
-    }
-    for (int y=y0; y<y1; y++) {                       // Loop over image rows
-        //fprintf(stderr,"%d Rendering (%d spp) %5.2f%%\n",thread_num,samps*4,100.*(y-y0)/(y1-y0));
-        //fprintf(stderr,"%d y=%d\n",thread_num,y); fflush(stderr);
-        for (unsigned short x=0, Xi[3]={0,0,static_cast<unsigned short>(y*y*y)}; x<w; x++) {   // Loop cols
-            //fprintf(stderr,"%d x=%d\n",thread_num,x); fflush(stderr);
-            for (int sy=0, i=(h-y-1)*w+x; sy<2; sy++) {     // 2x2 subpixel rows
-                //fprintf(stderr,"%d sy=%d\n",thread_num,sy); fflush(stderr);
-                for (int sx=0; sx<2; sx++, r=Vec()) {        // 2x2 subpixel cols
-                    //fprintf(stderr,"%d sx=%d\n",thread_num,sy); fflush(stderr);
-                    for (int s=0; s<(samps/4); s++) {
-                        double r1=2*erand48(Xi), dx=r1<1 ? sqrt(r1)-1: 1-sqrt(2-r1);
-                        double r2=2*erand48(Xi), dy=r2<1 ? sqrt(r2)-1: 1-sqrt(2-r2);
-                        Vec d = cx*( ( (sx+.5 + dx)/2 + x)/w - .5) +
-                                                       cy*( ( (sy+.5 + dy)/2 + y)/h - .5) + cam.d;
-                        r = r + radiance(Ray(cam.o+d*140,d.norm()),0,Xi)*(1./samps);
-                    } // Camera rays are pushed ^^^^^ forward to start in interior
-                    c[i] = c[i] + Vec(clamp(r.x),clamp(r.y),clamp(r.z))*.25;
+    Task task;
+
+    tasks.firstR(task);
+    while (!task.done) {
+        for (int y=task.y0; y<task.y1; ++y) {                       // Loop over image rows
+            //fprintf(stderr,"%d Rendering (%d spp) %5.2f%%\n",thread_num,samps*4,100.*(y-y0)/(y1-y0));
+            //fprintf(stderr,"%d y=%d\n",thread_num,y); fflush(stderr);
+            for (unsigned short x=task.x0, Xi[3]={0,0,static_cast<unsigned short>(y*y*y)}; x<task.x1; ++x) {   // Loop cols
+                //fprintf(stderr,"%d x=%d\n",thread_num,x); fflush(stderr);
+                for (int sy=0, i=(h-y-1)*w+x; sy<2; sy++) {     // 2x2 subpixel rows
+                    //fprintf(stderr,"%d sy=%d\n",thread_num,sy); fflush(stderr);
+                    for (int sx=0; sx<2; sx++, r=Vec()) {        // 2x2 subpixel cols
+                        //fprintf(stderr,"%d sx=%d\n",thread_num,sy); fflush(stderr);
+                        for (int s=0; s<(task.samps/4); s++) {
+                            double r1=2*erand48(Xi), dx=r1<1 ? sqrt(r1)-1: 1-sqrt(2-r1);
+                            double r2=2*erand48(Xi), dy=r2<1 ? sqrt(r2)-1: 1-sqrt(2-r2);
+                            Vec d = cx*( ( (sx+.5 + dx)/2 + x)/w - .5) +
+                                                           cy*( ( (sy+.5 + dy)/2 + y)/h - .5) + cam.d;
+                            r = r + radiance(Ray(cam.o+d*140,d.norm()),0,Xi)*(1./task.samps);
+                        } // Camera rays are pushed ^^^^^ forward to start in interior
+                        c[i] = c[i] + Vec(clamp(r.x),clamp(r.y),clamp(r.z))*.25;
+                    }
                 }
             }
         }
+        tasks.firstR(task);
     }
-    fprintf(stderr,"%d done.\n",thread_num);
+    fprintf(stderr,"done.\n");
 }
 
 int main(int argc, char *argv[]){
     int w=1024, h=768, samps = 1; // # samples
-
+    int divisions = 4;
     unsigned int num_threads = std::thread::hardware_concurrency();
     std::string output = "image.ppm";
 
@@ -428,6 +436,7 @@ int main(int argc, char *argv[]){
         else if (std::string(argv[i])=="-samples") samps = atoi(argv[++i]);
         else if (std::string(argv[i])=="-width") w = atoi(argv[++i]);
         else if (std::string(argv[i])=="-height") h = atoi(argv[++i]);
+        else if (std::string(argv[i])=="-divisions") divisions = atoi(argv[++i]);
         else if (std::string(argv[i])=="-output") output = argv[++i];
     }
     Ray cam(Vec(50,52,295.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
@@ -437,10 +446,16 @@ int main(int argc, char *argv[]){
 
 
     std::vector<std::thread> threads;
+    ConcurrentBoundedQueue<Task> tasks(divisions*divisions + num_threads);
     // Launch a group of threads
     for (int i = 0; i < num_threads; ++i) {
-        threads.push_back(std::thread(render,i,num_threads,w,h,samps,cam,cx,cy,r,c));
+        threads.push_back(std::thread([&] () { render(tasks,w,h,cam,cx,cy,r,c); }));
     }
+    for (int i = 0; i < divisions; ++i)
+        for (int j = 0; j < divisions; ++j) 
+            tasks.enqueue(Task((i*w)/divisions,std::min(((i+1)*w)/divisions,w),
+                          (j*h)/divisions,std::min(((j+1)*h)/divisions,h),samps));
+    for (int i = 0; i < num_threads; ++i) tasks.enqueue(Task()); //These are ending tasks
     // Join the threads with the main thread
     for(auto &t : threads) {
         t.join();
