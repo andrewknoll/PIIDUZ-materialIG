@@ -5,6 +5,7 @@
 //    - Added new scenes by Kevin Beason
 //    - Removed debugging printfs
 //    - Added command line parameters
+//    - Parallelization through a concurrent queue of tasks
 
 // Make:
 // smallpt_thd: smallpt_thd.cpp
