@@ -14,7 +14,7 @@ CC = g++         # para compilar
 #---------------------------------------------------------
 # para compilación y enlazado ("linkado")
 CPPFLAGS=-I. -I../fuentes_p3_new/ConcurrentBoundedQueue -I../fuentes_p3_new/Semaphore_V4 -I../fuentes_p3_new/Logger_V2  -I../fuentes_p3_new/BoundedQueue  -std=c++11     # opciones compilación
-LDFLAGS=-pthread            # opciones de "linkado"
+LDFLAGS=-pthread -latomic           # opciones de "linkado"
 #---------------------------------------------------------
 # vars
 CBQ = ../fuentes_p3_new/ConcurrentBoundedQueue/ConcurrentBoundedQueue
