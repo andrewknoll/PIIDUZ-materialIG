@@ -1,4 +1,4 @@
-// readable smallpt, a Path Tracer by Kevin Beason, 2008.  
+// readable smallpt, a Path Tracer by Kevin Beason, 2008.
 // Adjusted // for my particular readability sensitivities by Roger Allen, 2016
 // Added C++11 multithreading & removed openmp.
 // Adolfo Muñoz, 2020
@@ -11,7 +11,7 @@
 // smallpt_thd: smallpt_thd.cpp
 //	g++ -Wall -std=c++11 -O3 smallpt_thd.cpp -pthread -o smallpt_thd
 
-// Usage: time ./smallpt 100 
+// Usage: time ./smallpt 100
 // N  real
 // 1  151
 // 2   81
@@ -26,9 +26,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <atomic>
+#include <chrono>
 #include <vector>
 #include <thread>
-#include <atomic>
 #include <string>
 
 #include <ConcurrentBoundedQueue.hpp>
@@ -107,7 +108,7 @@ void set_scene(const std::string& name) {
     //Extra scenes
     //Kevin Beason
     //12/04/2008
-    
+
     if (name == "sky") {
         // Idea stolen from Picogen http://picogen.org/ by phresnel/greenhybrid
         Vec Cen(50,40.8,-860);
@@ -387,7 +388,7 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi){
 struct Task {
     int x0, x1, y0, y1, samps;
     bool done;
-    Task(int x0, int x1, int y0, int y1, int samps) : 
+    Task(int x0, int x1, int y0, int y1, int samps) :
         x0(x0), x1(x1), y0(y0), y1(y1), samps(samps), done(false) {}
     Task() : done(true) {}
 };
@@ -448,12 +449,13 @@ int main(int argc, char *argv[]){
 
     std::vector<std::thread> threads;
     ConcurrentBoundedQueue<Task> tasks(divisions*divisions + num_threads);
+    auto start = std::chrono::steady_clock::now();
     // Launch a group of threads
     for (int i = 0; i < num_threads; ++i) {
         threads.push_back(std::thread([&] () { render(tasks,w,h,cam,cx,cy,r,c); }));
     }
     for (int i = 0; i < divisions; ++i)
-        for (int j = 0; j < divisions; ++j) 
+        for (int j = 0; j < divisions; ++j)
             tasks.enqueue(Task((i*w)/divisions,std::min(((i+1)*w)/divisions,w),
                           (j*h)/divisions,std::min(((j+1)*h)/divisions,h),samps));
     for (int i = 0; i < num_threads; ++i) tasks.enqueue(Task()); //These are ending tasks
@@ -461,6 +463,9 @@ int main(int argc, char *argv[]){
     for(auto &t : threads) {
         t.join();
     }
+    auto stop = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = stop-start;
+    std::cout << "Execution time: " << elapsed_seconds.count() << "s\n";
 
     fprintf(stderr,"\n");
 
