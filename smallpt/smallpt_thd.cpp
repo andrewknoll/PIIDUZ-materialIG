@@ -1,4 +1,4 @@
-// readable smallpt, a Path Tracer by Kevin Beason, 2008.  
+// readable smallpt, a Path Tracer by Kevin Beason, 2008.
 // Adjusted // for my particular readability sensitivities by Roger Allen, 2016
 // Added C++11 multithreading & removed openmp.
 // Adolfo Muñoz, 2020
@@ -10,7 +10,7 @@
 // smallpt_thd: smallpt_thd.cpp
 //	g++ -Wall -std=c++11 -O3 smallpt_thd.cpp -pthread -o smallpt_thd
 
-// Usage: time ./smallpt 100 
+// Usage: time ./smallpt 100
 // N  real
 // 1  151
 // 2   81
@@ -25,10 +25,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <atomic>
+#include <chrono>
+#include <iostream>
+#include <string>
 #include <vector>
 #include <thread>
-#include <atomic>
-#include <string>
 
 // Vec is a structure to store position (x,y,z) and color (r,g,b)
 struct Vec {
@@ -104,7 +106,7 @@ void set_scene(const std::string& name) {
     //Extra scenes
     //Kevin Beason
     //12/04/2008
-    
+
     if (name == "sky") {
         // Idea stolen from Picogen http://picogen.org/ by phresnel/greenhybrid
         Vec Cen(50,40.8,-860);
@@ -437,6 +439,8 @@ int main(int argc, char *argv[]){
 
 
     std::vector<std::thread> threads;
+
+    auto start = std::chrono::steady_clock::now();
     // Launch a group of threads
     for (int i = 0; i < num_threads; ++i) {
         threads.push_back(std::thread(render,i,num_threads,w,h,samps,cam,cx,cy,r,c));
@@ -445,8 +449,13 @@ int main(int argc, char *argv[]){
     for(auto &t : threads) {
         t.join();
     }
+    auto stop = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = stop-start;
+    std::cout << "Execution time: " << elapsed_seconds.count() << "s\n";
 
     fprintf(stderr,"\n");
+
+
 
     FILE *f = fopen(output.c_str(), "w");         // Write image to PPM file.
     fprintf(f, "P3\n%d %d\n%d\n", w, h, 255);
