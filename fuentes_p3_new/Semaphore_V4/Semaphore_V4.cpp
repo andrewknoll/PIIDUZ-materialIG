@@ -11,7 +11,6 @@
 //http://en.cppreference.com/w/cpp/thread/condition_variable
 //La estudiaremos con más detalle cuando tratemos en la asignatura la parte de "monitores"
 
-
 #include <Semaphore_V4.hpp>
 
 //----------------------------------------------------------
@@ -32,7 +31,7 @@ Semaphore::~Semaphore() {
 }
 //----------------------------------------------------------
 void Semaphore::setInitValue(const int n, const string info) {
-    unique_lock<mutex> lck(mtx); //mutex para atomicidad de la función
+    unique_lock<mutex_type> lck(mtx); //mutex para atomicidad de la función
 
     assert(!initialized && n >= 0);
 
@@ -42,7 +41,7 @@ void Semaphore::setInitValue(const int n, const string info) {
 }
 //----------------------------------------------------------
 void Semaphore::wait() {
-    unique_lock<mutex> lck(mtx);
+    unique_lock<mutex_type> lck(mtx);
 
     assert(initialized);
 
@@ -55,7 +54,7 @@ void Semaphore::wait() {
 }
 //----------------------------------------------------------
 void Semaphore::signal() {
-    unique_lock<mutex> lck(mtx);
+    unique_lock<mutex_type> lck(mtx);
 
     assert(initialized);
 
@@ -66,18 +65,18 @@ void Semaphore::signal() {
 }
 //----------------------------------------------------------
 void Semaphore::signal(const int n) {
-    unique_lock<mutex> lck(mtx);
+    unique_lock<mutex_type> lck(mtx);
 
     assert(initialized && n>0);
 
     count = count+n;
     cv.notify_all();
 
-    ADD_EVENT(info + "," + "SIGNAL," + to_string(count)); 
+    ADD_EVENT(info + "," + "SIGNAL," + to_string(count));
 }
 //----------------------------------------------------------
 void Semaphore::wait(const int n) {
-    unique_lock<mutex> lck(mtx);
+    unique_lock<mutex_type> lck(mtx);
 
     assert(initialized && n>0);
 

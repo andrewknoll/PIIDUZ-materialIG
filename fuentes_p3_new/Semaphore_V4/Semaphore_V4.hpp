@@ -11,14 +11,19 @@
 //         M. Ben-Ari, "Principles of Concurrent and Distributed Programming", Addison-Wesley, 2006
 //         denomina "Busy-wait" (ver pág. 120)
 //         Para los casos en que el uso del semáforo va a ser exclusivamente como "mutex", Cpp
-//         suministra la clase "std::mutex", cuya especificación se encuentra en 
+//         suministra la clase "std::mutex", cuya especificación se encuentra en
 //         http://en.cppreference.com/w/cpp/thread/mutex
 //*****************************************************************
 
 #ifndef SEMAPHORE_V4_HPP
 #define SEMAPHORE_V4_HPP
 
-#include <mutex>
+#if (MUTEX > 0 ) && (MUTEX < 4)
+    #include "my_mutex.hpp"
+#else
+    #include <mutex>
+#endif
+
 #include <condition_variable>
 #include <assert.h>
 #include <fstream>
@@ -37,9 +42,25 @@ using namespace std; //mutex, condition_variable, etc.
 
 class Semaphore {
 private:
-    mutex mtx;                    //los dos primeros atributos se entenderán al estudiar los monitores
+#if MUTEX == 1
+    #warning "Using K mutex"
+    my_mutex mtx{'K'};
+    using mutex_type = my_mutex;
+#elif MUTEX == 2
+    #warning "Using s mutex"
+    my_mutex mtx{'s'};
+    using mutex_type = my_mutex;
+#elif MUTEX == 3
+    #warning "Using n mutex"
+    my_mutex mtx{'n'};
+    using mutex_type = my_mutex;
+#else
+    mutex mtx;
+    using mutex_type = mutex;
+#endif
+    // los dos primeros atributos se entenderán al estudiar los monitores
     condition_variable_any cv;
-    volatile int count;                    //natural asociado al semáforo  
+    volatile int count;                    //natural asociado al semáforo
     volatile bool initialized;             //para manejar constructor genérico: ¿está inicializado?
     //si vamos a querer trabajar con información en un log
     string info;                  //información complementaria para "logging"
@@ -68,7 +89,7 @@ public:
     //Coms: se invoca de manera automática al cerrarse el bloque donde ha sido declarado
     ~Semaphore();
 
-    //------------------------- 
+    //-------------------------
     //Pre:  n>=0 AND NOT initialized
     //Post: initialized AND count=n
     //Coms: Semáforos declarados con los constructores "Semaphore()" y "Semaphore(Logger &logger, string name)"
@@ -82,8 +103,8 @@ public:
     void signal();
 
     //Pre: initialized
-    //Post: <await count>0 
-    //          count-- 
+    //Post: <await count>0
+    //          count--
     //      >
     //Coms: en el caso de semáforos con información de log, genera un evento en el fichero
     void wait();
@@ -95,11 +116,11 @@ public:
     void signal(int n);
 
     //Pre:  n>0 AND initialized
-    //Post: <await count>=n 
+    //Post: <await count>=n
     //          count = count-n
     //      >
     //Coms: en el caso de semáforos con información de log, genera un evento en el fichero
     void wait(const int n);
 };
 
-#endif 
+#endif
