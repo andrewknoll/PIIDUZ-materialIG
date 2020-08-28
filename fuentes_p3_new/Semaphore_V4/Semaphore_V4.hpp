@@ -18,8 +18,11 @@
 #ifndef SEMAPHORE_V4_HPP
 #define SEMAPHORE_V4_HPP
 
-#if (MUTEX > 0 ) && (MUTEX < 4)
+// FIXME chapuza
+#if (MUTEX > 0 ) && (MUTEX < 4)  // library
     #include "my_mutex.hpp"
+#elif (MUTEX >= 4) && (MUTEX < 6) // assembly
+    #include "asm_mutex.hpp"
 #else
     #include <mutex>
 #endif
@@ -54,6 +57,14 @@ private:
     #warning "Using n mutex"
     my_mutex mtx{'n'};
     using mutex_type = my_mutex;
+#elif MUTEX == 4
+    #warning "Using asm mutex"
+    asm_mutex<asm_mutex_impl::spin> mtx;
+    using mutex_type = asm_mutex<asm_mutex_impl::spin>;
+#elif MUTEX == 5
+    #warning "Using asm sleep mutex"
+    asm_mutex<asm_mutex_impl::sleep> mtx;
+    using mutex_type = asm_mutex<asm_mutex_impl::sleep>;
 #else
     mutex mtx;
     using mutex_type = mutex;
