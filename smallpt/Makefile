@@ -13,7 +13,7 @@ RM = /bin/rm -f  # para limpiar
 CC = g++         # para compilar
 #---------------------------------------------------------
 # para compilación y enlazado ("linkado")
-CPPFLAGS=-I. -I../fuentes_p3_new/ConcurrentBoundedQueue -I../fuentes_p3_new/Semaphore_V4 -I../fuentes_p3_new/Logger_V2  -I../fuentes_p3_new/BoundedQueue  -std=c++11     # opciones compilación
+CPPFLAGS=-I. -I../fuentes_p3_new/ConcurrentBoundedQueue -I../fuentes_p3_new/Semaphore_V4 -I../fuentes_p3_new/Logger_V2  -I../fuentes_p3_new/BoundedQueue  -std=c++11 -O3    # opciones compilación
 LDFLAGS=-pthread -latomic           # opciones de "linkado"
 #---------------------------------------------------------
 # vars
@@ -30,7 +30,7 @@ all: smallpt_thd smallpt_queue_mutex_def smallpt_queue_mutex_K smallpt_queue_mut
 smallpt_thd:
 	${CC} smallpt_thd.cpp -o smallpt_thd ${CPPFLAGS} ${LDFLAGS}
 smallpt_queue_mutex_def:
-	${CC} smallpt_queue.cpp ${LG}.cpp -o $@ ${CPPFLAGS} ${LDFLAGS}
+	${CC} smallpt_queue.cpp ${SM}.cpp ${LG}.cpp -o $@ ${CPPFLAGS} ${LDFLAGS}
 smallpt_queue_mutex_K: 
 	${CC} -DMUTEX=1 smallpt_queue.cpp ${SM}.cpp ${LG}.cpp -o $@ ${CPPFLAGS} ${LDFLAGS}
 smallpt_queue_mutex_s: 
