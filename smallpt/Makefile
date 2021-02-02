@@ -22,9 +22,9 @@ BQ = ../fuentes_p3_new/BoundedQueue/BoundedQueue
 SM = ../fuentes_p3_new/Semaphore_V4/Semaphore_V4
 LG = ../fuentes_p3_new/Logger_V2/Logger
 AM = ../fuentes_p3_new/Semaphore_V4/asm_mutex
-all: smallpt_thd smallpt_queue_mutex_def smallpt_queue_mutex_K smallpt_queue_mutex_n smallpt_queue_mutex_s #lo que se generará al ejecutar "make"
+all: smallpt_thd smallpt_queue_mutex_def smallpt_queue_mutex_K smallpt_queue_mutex_n smallpt_queue_mutex_s smallpt_queue_mutex_asm smallpt_queue_mutex_asm_sleep #lo que se generará al ejecutar "make"
 
-.PHONY: smallpt_queue_mutex_def smallpt_queue_mutex_K smallpt_queue_mutex_n smallpt_queue_mutex_s #lo que se generará al ejecutar "make"
+.PHONY: smallpt_queue_mutex_def smallpt_queue_mutex_K smallpt_queue_mutex_n smallpt_queue_mutex_s smallpt_queue_mutex_asm smallpt_queue_mutex_asm_sleep #lo que se generará al ejecutar "make"
 #---------------------------------------------------------
 # "linkar" y generar ejecutable.
 smallpt_thd:
