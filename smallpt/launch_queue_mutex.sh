@@ -18,7 +18,7 @@ do
     do
         for samples in 1 
         do
-            for divisions in 192 
+            for divisions in 128
             do
                 if [ ${divisions} -lt ${threads} ]
                 then
